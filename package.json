@@ -1,0 +1,12 @@
+{
+  "name": "warlan",
+  "version": "0.1.0",
+  "description": "Real-time building-capture strategy prototype (LAN multiplayer)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
