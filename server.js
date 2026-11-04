@@ -19,7 +19,7 @@ function makeBuildings() {
   // id, x, y, owner (-1 = neutral), troops
   // let rand = Math.floor(Math.random()*10)+1
   const b = [
-    [0, 120, 300, 0, 500],
+    [0, 120, 300, 0, 50],
     [1, 880, 300, 1, 50],
     [2, 500, 120, -1, 20],
     [3, 500, 480, -1, 20],
