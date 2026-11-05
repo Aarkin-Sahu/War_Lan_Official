@@ -59,6 +59,12 @@ let clockOffset = 0;
 let selected = null;
 let fraction = 0.5;
 
+// Drag interaction of the arrow
+let isDragging = false;
+let dragSource = null;
+let dragEnd = null;
+let hoveredTarget = null;
+
 // ==========================================
 // 5. WEBSOCKET CONNECTION
 // ==========================================
@@ -126,39 +132,104 @@ function buildingAt(p) {
     return null;
 }
 
+function clearDrag() {
+    isDragging = false;
+    dragSource = null;
+    dragEnd = null;
+    hoveredTarget = null;
+    selected = null;
+}
+
+//start dragging from our own selected building
+
 canvas.addEventListener('pointerdown', (ev) => {
-
-    if (!state || me === -1) return;
-
+    if(!state || me === -1 || ev.button !== 0) return;
     const b = buildingAt(worldPos(ev));
-
-    if (!b) {
-        selected = null;
+    if(!b || b.owner !== me){
+        clearDrag();
         return;
     }
 
-    if (selected === null) {
+    //updation of drag state
+    isDragging = true;
+    dragSource = b;
+    dragEnd = worldPos(ev);
+    hoveredTarget = null;
+    selected = b.id;
 
-        if (b.owner === me) {
-            selected = b.id;
+     // Keep receiving pointer events even if cursor leaves canvas
+    canvas.setPointerCapture(ev.pointerId);
+
+});
+
+// updation of arrow end point while dragging
+
+canvas.addEventListener('pointermove', (ev) => {
+
+    if (!isDragging) return;
+
+    const pointer = worldPos(ev);
+
+    const target = buildingAt(pointer);
+
+    if (target && target.id !== selected) {
+
+        hoveredTarget = target.id;
+
+        // Calculate direction from source to target
+        const dx = target.x - dragSource.x;
+        const dy = target.y - dragSource.y;
+
+        const distance = Math.hypot(dx, dy);
+
+        // Distance from tower centre where arrow should snap
+        const snapDistance = 44;
+
+        // Snap arrowhead to the edge of target tower
+        if (distance > 0) {
+            dragEnd = {
+                x: target.x - (dx / distance) * snapDistance,
+                y: target.y - (dy / distance) * snapDistance
+            };
         }
 
-    } else if (b.id === selected) {
-
-        selected = null;
-
     } else {
+
+        hoveredTarget = null;
+
+        // Arrow follows the actual pointer
+        dragEnd = pointer;
+    }
+});
+
+//release and sending of troops
+
+canvas.addEventListener('pointerup', (ev) => {
+
+    if (!isDragging) return;
+
+    const target = buildingAt(worldPos(ev));
+
+    // Check whether the destination is valid
+    if (target && target.id !== selected) {
 
         send({
             t: 'send',
             from: selected,
-            to: b.id,
+            to: target.id,
             fraction
         });
-
-        selected = null;
     }
+
+    clearDrag();
 });
+
+//browser interrupts the drag
+
+canvas.addEventListener('pointercancel', () => {
+    clearDrag();
+});
+
 
 // ==========================================
 // 7. KEYBOARD CONTROLS
@@ -262,6 +333,62 @@ function drawTerritoryMarker(b, isMine, t) {
 // 10. DRAW BUILDINGS
 // ==========================================
 
+function drawDragArrow() {
+
+    if (!isDragging || !dragSource || !dragEnd) return;
+
+    const startX = dragSource.x;
+    const startY = dragSource.y;
+
+    const endX = dragEnd.x;
+    const endY = dragEnd.y;
+
+    // Calculate the direction of the arrow
+    const angle = Math.atan2(
+        endY - startY,
+        endX - startX
+    );
+
+    const headLength = 14;
+
+    ctx.save();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.fillStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 5;
+
+    // Draw arrow shaft
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    // Draw arrowhead
+    ctx.beginPath();
+    ctx.moveTo(endX, endY);
+
+    ctx.lineTo(
+        endX - headLength * Math.cos(angle - Math.PI / 6),
+        endY - headLength * Math.sin(angle - Math.PI / 6)
+    );
+
+    ctx.lineTo(
+        endX - headLength * Math.cos(angle + Math.PI / 6),
+        endY - headLength * Math.sin(angle + Math.PI / 6)
+    );
+
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+}
+
+
 function drawBuilding(b, t) {
 
     const isMine = b.id === selected;
@@ -271,6 +398,37 @@ function drawBuilding(b, t) {
 
     // Draw territory indicator first
     drawTerritoryMarker(b, isMine, t);
+
+    // Highlight the tower currently targeted by the arrow
+if (b.id === hoveredTarget) {
+
+    ctx.save();
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        b.x,
+        b.y + 25,
+        49,
+        24,
+        0,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 20;
+
+    ctx.fill();
+
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+
+    ctx.stroke();
+
+    ctx.restore();
+}
 
     // Ground shadow
     ctx.beginPath();
@@ -547,6 +705,10 @@ function frame(t) {
         // Draw buildings
         for (const b of state.buildings) {
             drawBuilding(b, t || 0);
+        }
+
+        if(isDragging){
+            drawDragArrow();
         }
 
         // Winner screen
