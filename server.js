@@ -23,12 +23,12 @@ function makeBuildings() {
     [1, 880, 300, 1, 50],
     [2, 500, 120, -1, 20],
     [3, 500, 480, -1, 20],
-    [4, 320, 300, -1, Math.floor(Math.random()*35)+1],
-    [5, 680, 300, -1, Math.floor(Math.random()*35)+1],
-    [6, 250, 100, -1, Math.floor(Math.random()*35)+1],
-    [7, 750, 500, -1, Math.floor(Math.random()*35)+1],
-    [8, 250, 500, -1, Math.floor(Math.random()*35)+1],
-    [9, 750, 100, -1, Math.floor(Math.random()*35)+1],
+    [4, 320, 300, -1, Math.floor(Math.random()*16)+20],
+    [5, 680, 300, -1, Math.floor(Math.random()*16)+20],
+    [6, 250, 100, -1, Math.floor(Math.random()*16)+20],
+    [7, 750, 500, -1, Math.floor(Math.random()*16)+20],
+    [8, 250, 500, -1, Math.floor(Math.random()*16)+20],
+    [9, 750, 100, -1, Math.floor(Math.random()*16)+20],
   ];
   return b.map(([id, x, y, owner, troops]) => ({ id, x, y, owner, troops, maxTroops : troops, start_owner : owner }));
 }
